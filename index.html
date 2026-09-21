@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Mixture of Experts (MoE) Architecture // Neural Network Visualizer</title>
+    <meta name="description" content="An interactive, elegant 3D rendering of Mixture of Experts (MoE) neural network architecture in Large Language Models. Shows sparse routing, Top-K Softmax gating, and expert MLP processing.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./js/vendor/three.module.js",
+            "three/addons/": "./js/vendor/"
+        }
+    }
+    </script>
+    <script>
+    window.addEventListener('error', function(e) {
+        var box = document.getElementById('debug-error-box');
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'debug-error-box';
+            box.style.cssText = 'position:fixed;top:12px;left:12px;right:12px;z-index:999999;background:rgba(220,38,38,0.95);color:#fff;padding:16px 20px;border-radius:10px;font-family:monospace;font-size:13px;backdrop-filter:blur(8px);box-shadow:0 10px 25px rgba(0,0,0,0.5);';
+            document.body.appendChild(box);
+        }
+        box.innerHTML = '<strong>Application Error:</strong> ' + e.message + '<br><small>' + (e.filename || '') + ':' + (e.lineno || '') + '</small>';
+    });
+    // Safety auto-dismiss loader after 4 seconds if WebGL canvas initialized
+    setTimeout(function() {
+        var loader = document.getElementById('loading-overlay');
+        var canvas = document.querySelector('#webgl-container canvas');
+        if (loader && canvas) {
+            loader.style.opacity = '0';
+            setTimeout(function() { if (loader.parentNode) loader.remove(); }, 500);
+        }
+    }, 3500);
+    </script>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loading-overlay">
+        <div class="loader-core"></div>
+        <div class="loader-text">INITIALIZING MOE NEURAL LATTICE…</div>
+    </div>
+
+    <!-- WebGL Canvas Container -->
+    <div id="webgl-container"></div>
+
+    <!-- Minimalist HUD Overlay -->
+    <div id="hud-overlay">
+
+        <!-- Top Header & Token Controller -->
+        <header class="top-header">
+            <!-- Left: Brand & Efficiency Metrics -->
+            <div class="brand-group interactive">
+                <div class="brand-title-wrap">
+                    <span class="brand-badge">MOE // DYNAMICS</span>
+                    <h1 class="brand-title">Mixture of Experts</h1>
+                </div>
+
+                <div class="metrics-strip">
+                    <div class="metric-pill glass-panel">
+                        <span class="label">Sparsity</span>
+                        <span class="val" id="metric-sparsity">2 / 8 (25%)</span>
+                    </div>
+                    <div class="metric-pill glass-panel highlight">
+                        <span class="label">FLOPs Saved</span>
+                        <span class="val" id="metric-flops">75%</span>
+                    </div>
+                    <div class="metric-pill glass-panel highlight">
+                        <span class="label">Speedup</span>
+                        <span class="val" id="metric-speedup">4.0×</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: Interactive Token Injector -->
+            <div class="center-token-bar interactive">
+                <div class="token-chips-row" id="token-chips">
+                    <!-- Dynamic preset prompt chips -->
+                </div>
+
+                <div class="token-input-wrap">
+                    <input type="text" id="custom-token-input" placeholder="Inject custom token or prompt (e.g. def predict(), poem, equation...)" spellcheck="false" autocomplete="off">
+                    <button id="btn-inject-token">Route Token</button>
+                </div>
+            </div>
+
+            <!-- Right: Real-time Softmax Radar Distribution Card -->
+            <div class="softmax-card glass-panel interactive">
+                <div class="card-title-row">
+                    <h3>Router Gating (α)</h3>
+                    <span class="val" id="current-token-display" style="font-family: var(--font-mono); font-size: 11px; color: var(--cyan-neon); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">"def fib"</span>
+                </div>
+                <div class="softmax-bars" id="softmax-bars-container">
+                    <!-- Dynamic 8 expert probability bars -->
+                </div>
+            </div>
+        </header>
+
+        <!-- Bottom Controls Dock -->
+        <footer class="bottom-dock-container">
+            <div class="control-dock glass-panel interactive">
+
+                <!-- Playback controls -->
+                <div class="dock-group">
+                    <button id="btn-play-pause" class="dock-btn dock-icon-btn" title="Pause/Resume">⏸</button>
+                    <button id="btn-step" class="dock-btn dock-icon-btn" title="Step Forward">⏭</button>
+                    <div class="dock-select-wrap">
+                        <select id="speed-select" title="Simulation Speed">
+                            <option value="0.5">0.5×</option>
+                            <option value="1.0" selected>1.0×</option>
+                            <option value="1.75">1.75×</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="dock-divider"></div>
+
+                <!-- Sparsity Top-K Selectors -->
+                <div class="dock-group">
+                    <span class="sparsity-label">Sparsity:</span>
+                    <button class="dock-btn topk-btn" data-k="1">Top-1</button>
+                    <button class="dock-btn topk-btn active" data-k="2">Top-2</button>
+                    <button class="dock-btn topk-btn" data-k="4">Top-4</button>
+                    <button class="dock-btn topk-btn" data-k="8">Dense (All)</button>
+                </div>
+
+                <div class="dock-divider"></div>
+
+                <!-- Camera Angle Presets -->
+                <div class="dock-group">
+                    <button class="dock-btn cam-btn active" data-cam="overview">Overview</button>
+                    <button class="dock-btn cam-btn" data-cam="router">Router Core</button>
+                    <button class="dock-btn cam-btn" data-cam="expert">Neural MLP</button>
+                    <button class="dock-btn cam-btn" data-cam="aggregator">Aggregator</button>
+                    <button class="dock-btn cam-btn" data-cam="cinematic">Cinematic</button>
+                </div>
+
+                <div class="dock-divider"></div>
+
+                <!-- Audio Ambient Synthesizer -->
+                <div class="dock-group">
+                    <button id="btn-audio" class="dock-btn dock-icon-btn" title="Toggle Ambient Audio (Muted)">🔇</button>
+                </div>
+
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Application Module -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
